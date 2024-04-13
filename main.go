@@ -1,10 +1,12 @@
 package main
 
 import (
+	"basic-wc/wc"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 const usage = `Usage of wc:
@@ -38,8 +40,32 @@ func main() {
 	flag.Parse()
 
 	filename := os.Args[len(os.Args)-1]
+	filename = strings.TrimSpace(filename)
+
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 		fmt.Fprintf(os.Stderr, "Could not read file %s\n%s", filename, usage)
 		os.Exit(1)
 	}
+
+	statTypes := wc.StatTypes{
+		ByteRetrieve: byteCount,
+		LineRetrieve: lineCount,
+		WordRetrieve: wordCount,
+		CharRetrieve: charCount,
+	}
+
+	if !statTypes.ByteRetrieve && !statTypes.LineRetrieve && !statTypes.WordRetrieve && !statTypes.CharRetrieve {
+		statTypes.ByteRetrieve = true
+		statTypes.LineRetrieve = true
+		statTypes.WordRetrieve = true
+	}
+
+	statCounts, err := wc.GetStats(filename, statTypes)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Something went wrong: %v\n%s", err, usage)
+		os.Exit(1)
+	}
+
+	fmt.Println(statCounts)
 }
