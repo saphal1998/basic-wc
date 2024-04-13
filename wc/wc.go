@@ -84,6 +84,9 @@ func GetStats(filename string, statTypes StatTypes) (*StatCounts, error) {
 	return &statCounts, nil
 }
 
+/**
+** This function opens the file and then reads from it as a designated split functions
+**/
 func getScanCount(filename string, splitFunc bufio.SplitFunc, outputChan chan<- uint64) {
 	var f *os.File
 	if len(filename) == 0 {
