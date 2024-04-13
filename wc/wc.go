@@ -3,7 +3,6 @@ package wc
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -51,18 +50,6 @@ func GetStats(filename string, statTypes StatTypes) (*StatCounts, error) {
 		StatTypes: statTypes,
 		filename:  filename,
 	}
-	var f *os.File
-	if len(filename) == 0 {
-		f = os.Stdin
-	} else {
-		// This is added here, because if we use the `:=` syntax in os.Open, the file is closed as soon as the else scope ends, which is not what we want
-		var err error
-		f, err = os.Open(filename)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-	}
 
 	byteCount := make(chan uint64, 0)
 	wordCount := make(chan uint64, 0)
@@ -70,16 +57,16 @@ func GetStats(filename string, statTypes StatTypes) (*StatCounts, error) {
 	lineCount := make(chan uint64, 0)
 
 	if statCounts.ByteRetrieve {
-		go getScanCount(f, bufio.ScanBytes, byteCount)
+		go getScanCount(filename, bufio.ScanBytes, byteCount)
 	}
 	if statCounts.WordRetrieve {
-		go getScanCount(f, bufio.ScanWords, wordCount)
+		go getScanCount(filename, bufio.ScanWords, wordCount)
 	}
 	if statCounts.CharRetrieve {
-		go getScanCount(f, bufio.ScanRunes, runeCount)
+		go getScanCount(filename, bufio.ScanRunes, runeCount)
 	}
 	if statCounts.LineRetrieve {
-		go getScanCount(f, bufio.ScanLines, lineCount)
+		go getScanCount(filename, bufio.ScanLines, lineCount)
 	}
 
 	if statCounts.ByteRetrieve {
@@ -97,8 +84,21 @@ func GetStats(filename string, statTypes StatTypes) (*StatCounts, error) {
 	return &statCounts, nil
 }
 
-func getScanCount(r io.Reader, splitFunc bufio.SplitFunc, outputChan chan<- uint64) {
-	scanner := bufio.NewScanner(r)
+func getScanCount(filename string, splitFunc bufio.SplitFunc, outputChan chan<- uint64) {
+	var f *os.File
+	if len(filename) == 0 {
+		f = os.Stdin
+	} else {
+		// This is added here, because if we use the `:=` syntax in os.Open, the file is closed as soon as the else scope ends, which is not what we want
+		var err error
+		f, err = os.Open(filename)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+	}
+
+	scanner := bufio.NewScanner(f)
 	scanner.Split(splitFunc)
 	count := 0
 
